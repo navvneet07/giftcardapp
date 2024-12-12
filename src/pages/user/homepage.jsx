@@ -1,215 +1,140 @@
-import React, { useEffect, useState } from "react";
-import Footer from "../../components/user/footer/footer";
-import { Link } from "react-router-dom";
-import Navbar from "../../components/user/navbar/navbar";
-import { motion } from "framer-motion";
-import AOS from "aos";
-import "aos/dist/aos.css"; // AOS styles
-import { Helmet } from "react-helmet";
-
-// Scroll Progress Bar Component
-const ScrollProgress = () => {
-  const [scrollProgress, setScrollProgress] = useState(0);
-
-  useEffect(() => {
-    const updateScrollProgress = () => {
-      const currentScroll = window.scrollY;
-      const scrollHeight =
-        document.documentElement.scrollHeight - window.innerHeight;
-      setScrollProgress((currentScroll / scrollHeight) * 100);
-    };
-
-    window.addEventListener("scroll", updateScrollProgress);
-    return () => window.removeEventListener("scroll", updateScrollProgress);
-  }, []);
-
-  return (
-    <motion.div
-      style={{ scaleX: scrollProgress / 100 }}
-      className="fixed top-0 left-0 h-2 bg-blue-500 origin-left z-50"
-      initial={{ scaleX: 0 }}
-      animate={{ scaleX: scrollProgress / 100 }}
-      transition={{ duration: 0.2 }}
-    />
-  );
-};
+import React, { useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import AOS from 'aos';
+import 'aos/dist/aos.css';
+import Navbar from '../../components/Navbar';
+import Footer from '../../components/Footer';
+import ProductCard from '../../components/ProductCard';
 
 const HomePage = () => {
   useEffect(() => {
     AOS.init({
-      duration: 1200, // Animation duration in milliseconds
-      easing: "ease-in-out", // Animation easing
-      once: true, // Whether animation should run only once
+      duration: 1000,
+      once: true,
     });
   }, []);
 
+  // Sample featured products (replace with actual data from your backend)
+  const featuredProducts = [
+    {
+      id: 1,
+      name: 'Premium Notebook',
+      price: 299,
+      image: '/images/notebook.jpg',
+      description: 'High-quality notebook with premium paper',
+      category: 'Stationery',
+      discount: 10,
+    },
+    // Add more sample products
+  ];
+
   return (
-    <>
-    <Helmet>
-      <title>Home | Mera Bestie</title>
-    </Helmet>
-    <div className="w-full">
-      <ScrollProgress />
+    <div className="min-h-screen">
       <Navbar />
-
+      
       {/* Hero Section */}
-      <section className="relative min-h-[600px] flex items-center justify-center overflow-hidden">
-        {/* Background Image */}
-        <div className="absolute inset-0 z-0">
-          <motion.img
-            src="https://cdn.wallpapersafari.com/89/8/lybQgH.jpg"
-            alt="Background"
-            className="w-full h-full object-cover"
-            initial={{ scale: 1.2 }}
-            animate={{ scale: 1 }}
-            transition={{ duration: 2, ease: "easeOut" }}
-          />
+      <section className="relative h-screen flex items-center justify-center bg-gradient-to-r from-purple-500 to-pink-500">
+        <div className="absolute inset-0 bg-black opacity-50"></div>
+        <div className="relative z-10 text-center text-white px-4">
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-4xl md:text-6xl font-bold mb-4"
+          >
+            Welcome to DD Store
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="text-xl mb-8"
+          >
+            Discover our collection of premium stationery and unique gifts
+          </motion.p>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+          >
+            <Link
+              to="/shop"
+              className="bg-white text-purple-600 px-8 py-3 rounded-full font-semibold hover:bg-purple-100 transition-colors duration-300"
+            >
+              Shop Now
+            </Link>
+          </motion.div>
         </div>
-
-        {/* Content */}
-        <motion.div
-          className="relative z-10 container mx-auto max-w-4xl px-4"
-          initial={{ opacity: 0, y: 50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1 }}
-        >
-          <div className="bg-pink-100/90 p-8 md:p-12 rounded-lg backdrop-blur-sm">
-            <h1 className="mb-6 text-4xl md:text-5xl font-serif text-center">
-              Revolutionizing Gift Giving
-            </h1>
-            <p className="mb-8 text-gray-700 text-center max-w-2xl mx-auto">
-              A world of unique gifts for every moment and milestone
-            </p>
-            <div className="text-center">
-              <Link to="/about">
-                <motion.button
-                  whileHover={{ scale: 1.1 }}
-                  className="bg-white text-black hover:bg-gray-50 px-8 py-2 rounded uppercase text-sm tracking-wider"
-                >
-                  Learn More
-                </motion.button>
-              </Link>
-            </div>
-          </div>
-        </motion.div>
       </section>
 
-      {/* Products Section */}
-      <section className="px-4 py-16">
-        <div className="container mx-auto max-w-6xl">
-          <motion.div
-            className="text-center mb-16"
-            initial={{ opacity: 0, y: -50 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 1 }}
-          >
-            <h2 className="text-4xl font-bold mb-4">Products</h2>
-            <div className="w-24 h-0.5 bg-gray-300 mx-auto mb-8"></div>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              Discover our diverse range of products crafted for all occasions.
-            </p>
-          </motion.div>
-
-          <motion.div
-            className="grid gap-8 md:grid-cols-2 lg:grid-cols-3"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={{
-              hidden: { opacity: 0, scale: 0.9 },
-              visible: {
-                opacity: 1,
-                scale: 1,
-                transition: { delayChildren: 0.2, staggerChildren: 0.2 },
-              },
-            }}
-          >
-            {[
-              {
-                img: "https://i.pinimg.com/originals/96/24/6e/96246e3c133e6cb5ae4c7843f9e45b22.jpg",
-                title: "Stationery Items",
-              },
-              {
-                img: "https://tse1.mm.bing.net/th?id=OIP.EYAqW5p_HzCoXKq1dXvGyQHaFj&pid=Api&P=0&h=180",
-                title: "Gift Items",
-              },
-              {
-                img: "https://tse3.mm.bing.net/th?id=OIP.90zsFkK9l2Nttf3fQu12ZwHaE8&pid=Api&P=0&h=180",
-                title: "Decor Items",
-              },
-            ].map((product, index) => (
-              <motion.div
-                key={index}
-                className="overflow-hidden rounded-lg shadow-md group"
-                variants={{
-                  hidden: { opacity: 0, y: 20 },
-                  visible: { opacity: 1, y: 0 },
-                }}
+      {/* Categories Section */}
+      <section className="py-16 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-3xl font-bold text-center mb-12">Shop by Category</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {['Stationery', 'Gifts', 'Greeting Cards'].map((category, index) => (
+              <div
+                key={category}
+                data-aos="fade-up"
+                data-aos-delay={index * 100}
+                className="relative group cursor-pointer"
               >
-                <div className="relative h-64">
+                <div className="relative h-64 rounded-lg overflow-hidden">
+                  <div className="absolute inset-0 bg-black opacity-40 group-hover:opacity-30 transition-opacity duration-300"></div>
                   <img
-                    src={product.img}
-                    alt={`Product: ${product.title}`}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
+                    src={`/images/${category.toLowerCase()}.jpg`}
+                    alt={category}
+                    className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-300"
                   />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <h3 className="text-white text-2xl font-bold">{category}</h3>
+                  </div>
                 </div>
-                <div className="p-6 bg-pink-100">
-                  <h3 className="text-xl font-semibold mb-2">{product.title}</h3>
-                  <p className="text-gray-600 text-sm">
-                    Discover high-quality and creative gift ideas.
-                  </p>
-                </div>
-              </motion.div>
+              </div>
             ))}
-          </motion.div>
+          </div>
         </div>
       </section>
 
-      {/* Vision Section */}
-      <section className="relative min-h-[600px] overflow-hidden" data-aos="zoom-in">
-        {/* Background Image */}
-        <div className="absolute inset-0 z-0">
-          <img
-            src="https://tse3.mm.bing.net/th?id=OIP.RNJBshhRJcxPoSt2Slj5bAHaEK&pid=Api&P=0&h=180"
-            alt="Vision background"
-            className="w-full h-full object-cover"
-            loading="lazy"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-purple-400/20 to-cyan-400/20"></div>
+      {/* Featured Products */}
+      <section className="py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-3xl font-bold text-center mb-12">Featured Products</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {featuredProducts.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
         </div>
+      </section>
 
-        {/* Content */}
-        <div className="container relative z-10 mx-auto max-w-6xl px-4 py-16">
-          <motion.div
-            className="max-w-xl"
-            initial={{ opacity: 0, x: -50 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 1 }}
-          >
-            <div className="bg-pink-100/90 p-8 md:p-12 rounded-lg backdrop-blur-sm">
-              <h2 className="text-4xl font-bold mb-6">Our Vision</h2>
-              <p className="text-gray-700 mb-8">
-                Penatibus sem vitae mollis luctus mi tellus. Maximus eu eleifend
-                aptent dapibus metus maecenas consequat. Elementum interdum a
-                semper.
-              </p>
-              <motion.button
-                whileHover={{ scale: 1.1 }}
-                className="bg-black text-white hover:bg-gray-900 px-6 py-2 rounded uppercase text-sm font-medium tracking-wider"
+      {/* Newsletter Section */}
+      <section className="py-16 bg-purple-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-3xl font-bold mb-4">Stay Updated</h2>
+          <p className="text-gray-600 mb-8">
+            Subscribe to our newsletter for exclusive offers and updates
+          </p>
+          <form className="max-w-md mx-auto">
+            <div className="flex gap-4">
+              <input
+                type="email"
+                placeholder="Enter your email"
+                className="flex-1 px-4 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
+              <button
+                type="submit"
+                className="bg-purple-600 text-white px-6 py-2 rounded-md hover:bg-purple-700 transition-colors duration-300"
               >
-                Learn More
-              </motion.button>
+                Subscribe
+              </button>
             </div>
-          </motion.div>
+          </form>
         </div>
       </section>
 
       <Footer />
     </div>
-    </>
   );
 };
 
