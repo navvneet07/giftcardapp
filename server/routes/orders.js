@@ -4,7 +4,6 @@ const Order = require('../models/Order');
 const Product = require('../models/Product');
 const auth = require('../middleware/auth');
 const admin = require('../middleware/admin');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { body, validationResult } = require('express-validator');
 
 // Create new order with validation
@@ -15,7 +14,7 @@ router.post('/',
     body('items.*.product').isMongoId(),
     body('items.*.quantity').isInt({ min: 1 }),
     body('shippingAddress').notEmpty(),
-    body('paymentInfo.method').isIn(['card', 'cod'])
+    body('paymentInfo.method').isIn(['razorpay', 'cod'])
   ],
   async (req, res) => {
     try {
@@ -31,47 +30,43 @@ router.post('/',
         shippingCost,
       } = req.body;
 
-      // Verify stock and calculate totals
-      let subtotal = 0;
-      for (const item of items) {
+      // Calculate total amount
+      let totalAmount = 0;
+      for (let item of items) {
         const product = await Product.findById(item.product);
         if (!product) {
-          return res.status(404).json({ message: `Product not found: ${item.product}` });
+          return res.status(404).json({ message: `Product ${item.product} not found` });
         }
-        if (product.stock < item.quantity) {
-          return res.status(400).json({ message: `Insufficient stock for ${product.name}` });
-        }
-        subtotal += product.price * item.quantity;
-
-        // Update stock
-        product.stock -= item.quantity;
-        await product.save();
+        totalAmount += product.price * item.quantity;
       }
 
-      const tax = subtotal * 0.18; // 18% GST
-      const total = subtotal + tax + shippingCost;
+      // Add shipping cost if provided
+      if (shippingCost) {
+        totalAmount += shippingCost;
+      }
 
+      // Create order
       const order = new Order({
-        user: req.user.userId,
+        user: req.user.id,
         items,
         shippingAddress,
+        totalAmount,
         paymentInfo,
-        subtotal,
-        shippingCost,
-        tax,
-        total,
+        status: paymentInfo.method === 'cod' ? 'pending' : 'processing'
       });
 
-      // Pre-save hook will calculate totals
       await order.save();
 
-      // Populate necessary fields for response
-      await order.populate('user', 'name email');
-      await order.populate('items.product', 'name price');
+      // Update product quantities
+      for (let item of items) {
+        await Product.findByIdAndUpdate(item.product, {
+          $inc: { quantity: -item.quantity }
+        });
+      }
 
       res.status(201).json(order);
     } catch (error) {
-      console.error('Order creation error:', error);
+      console.error('Error creating order:', error);
       res.status(500).json({ message: 'Error creating order' });
     }
   }
@@ -86,9 +81,9 @@ router.get('/my-orders',
       const limit = parseInt(req.query.limit) || 10;
       const status = req.query.status;
 
-      const query = { user: req.user.userId };
+      const query = { user: req.user.id };
       if (status) {
-        query.orderStatus = status;
+        query.status = status;
       }
 
       const orders = await Order.find(query)
@@ -120,7 +115,7 @@ router.get('/:id',
     try {
       const order = await Order.findOne({
         _id: req.params.id,
-        user: req.user.userId
+        user: req.user.id
       })
       .populate('items.product', 'name price images')
       .populate('user', 'name email');
@@ -140,19 +135,19 @@ router.get('/:id',
 // Update order status (admin only)
 router.put('/:id/status', [auth, admin], async (req, res) => {
   try {
-    const { orderStatus, trackingNumber } = req.body;
+    const { status, trackingNumber } = req.body;
     const order = await Order.findById(req.params.id);
 
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
     }
 
-    order.orderStatus = orderStatus;
+    order.status = status;
     if (trackingNumber) {
       order.trackingNumber = trackingNumber;
     }
 
-    if (orderStatus === 'delivered') {
+    if (status === 'delivered') {
       order.deliveredAt = Date.now();
     }
 
@@ -177,12 +172,12 @@ router.put('/:id/cancel',
       }
 
       // Check if user is authorized to cancel this order
-      if (order.user.toString() !== req.user.userId && req.user.role !== 'admin') {
+      if (order.user.toString() !== req.user.id && req.user.role !== 'admin') {
         return res.status(403).json({ message: 'Not authorized' });
       }
 
       // Check if order can be cancelled
-      if (!['pending', 'processing'].includes(order.orderStatus)) {
+      if (!['pending', 'processing'].includes(order.status)) {
         return res.status(400).json({ message: 'Order cannot be cancelled' });
       }
 
@@ -190,12 +185,12 @@ router.put('/:id/cancel',
       for (const item of order.items) {
         const product = await Product.findById(item.product);
         if (product) {
-          product.stock += item.quantity;
+          product.quantity += item.quantity;
           await product.save();
         }
       }
 
-      order.orderStatus = 'cancelled';
+      order.status = 'cancelled';
       order.cancellationReason = reason;
       order.cancelledAt = Date.now();
 
@@ -208,30 +203,12 @@ router.put('/:id/cancel',
   }
 );
 
-// Create payment intent (Stripe)
-router.post('/create-payment-intent', auth, async (req, res) => {
-  try {
-    const { amount } = req.body;
-
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(amount * 100), // Convert to cents
-      currency: 'inr',
-      metadata: { userId: req.user.userId },
-    });
-
-    res.json({ clientSecret: paymentIntent.client_secret });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Payment processing error' });
-  }
-});
-
 // Get all orders (Admin only)
 router.get('/', [auth, admin], async (req, res) => {
   try {
     const { page = 1, limit = 20, status } = req.query;
     const filter = {};
-    if (status) filter.orderStatus = status;
+    if (status) filter.status = status;
 
     const orders = await Order.find(filter)
       .populate('user', 'name email')
